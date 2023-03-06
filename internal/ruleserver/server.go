@@ -1,5 +1,5 @@
 package ruleserver
 
 func Run() {
-	GeneratorGenPostfixTree("20*(4/8)")
+	GeneratorGenPostfixTree("20*(8/4)>10")
 }

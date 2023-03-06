@@ -24,7 +24,7 @@ func printTreeNodeList(treeNodeList *list.List) {
 	}
 }
 func GenPostfixList(infixString string) *list.List {
-	operatorLevel := map[byte]int{'(': -1, '+': 0, '-': 0, '*': 1, '/': 1}
+	operatorLevel := map[byte]int{'(': 100, '<': 6, '>': 6, '+': 4, '-': 4, '*': 3, '/': 3}
 	operatorList := list.New()
 	postfixTreeList := list.New()
 	for i := 0; i < len(infixString); {
@@ -63,30 +63,24 @@ func GenPostfixList(infixString string) *list.List {
 			i++
 			continue
 		}
-		if inputOperator == '*' || inputOperator == '/' {
-			operatorList.PushFront(inputOperator)
-			i++
-			continue
-		}
 
-		if inputOperator == '+' || inputOperator == '-' {
-			for {
-				tmpElement := operatorList.Front()
-				if tmpElement == nil {
-					break
-				}
-				operatorInlist := tmpElement.Value.(byte)
-				if operatorLevel[inputOperator] > operatorLevel[operatorInlist] {
-					break
-				}
-				operatorList.Remove(tmpElement)
-				tmpTreeNode := &TreeNode{Type: "operator", Value: operatorInlist}
-				postfixTreeList.PushBack(tmpTreeNode)
+		for {
+			tmpElement := operatorList.Front()
+			if tmpElement == nil {
+				break
 			}
-			operatorList.PushFront(inputOperator)
-			i++
-			continue
+			operatorInlist := tmpElement.Value.(byte)
+			// 堆栈里操作符优先级大于要插入的操作符优先级
+			if operatorLevel[inputOperator] < operatorLevel[operatorInlist] {
+				break
+			}
+			operatorList.Remove(tmpElement)
+			tmpTreeNode := &TreeNode{Type: "operator", Value: operatorInlist}
+			postfixTreeList.PushBack(tmpTreeNode)
 		}
+		operatorList.PushFront(inputOperator)
+		i++
+		continue
 	}
 	for operatorList.Len() != 0 {
 		tmpElement := operatorList.Front()
