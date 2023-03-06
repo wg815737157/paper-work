@@ -1,44 +1,97 @@
 package mainserver
 
 import (
-	"deps/log4go"
+	"container/list"
 	"encoding/json"
-	"fmt"
 	"github.com/wg815737157/paper-work/internal/mainserver/db"
 	"github.com/wg815737157/paper-work/internal/mainserver/db/model"
 	internalpkg "github.com/wg815737157/paper-work/internal/pkg"
+	"github.com/wg815737157/paper-work/pkg/log"
 	"gorm.io/gorm"
-	"log"
 )
 
-func Init() {
+func executeNode(tree *internalpkg.Tree, node *internalpkg.Node) {
+	if node.NodeType == "start" {
+		node.IsUsed = true
+		node.IsSatisfied = true
+		node.IsSuccessful = true
+		return
+	}
+	//普通节点，结束节点验证满足条件
+	if node.NodeType == "normal" {
+		node.IsUsed = true
+		for _, pNodeId := range node.Pnodes {
+			if node.PnodeConditions[pNodeId] == tree.Nodes[pNodeId].Result {
+				continue
+			}
+			node.IsSatisfied = false
+			return
+		}
+		node.IsSatisfied = true
+		//执行节点内容
 
-	//	Init db
-
-	//	Init redis
+		node.IsSuccessful = true
+		return
+	}
+	if node.NodeType == "end" {
+		node.IsUsed = true
+		for _, pNodeId := range node.Pnodes {
+			if node.PnodeConditions[pNodeId] == tree.Nodes[pNodeId].Result {
+				continue
+			}
+			node.IsSatisfied = false
+			return
+		}
+		node.IsSatisfied = true
+		node.IsSuccessful = true
+		return
+	}
 
 }
 
 func Run() {
+	//日志
+	logger := log.SugarLogger()
+	//数据库
 	localdb := db.GetLocalDB()
-	log4go.Info("d")
-	tree := &internalpkg.Tree{}
-	node := &internalpkg.Node{}
-	tree.Nodes = append(tree.Nodes, node)
-	s := "{\n    \"nodes\":[\n        {\n            \"nodeId\":0,\n            \"nodeType\":\"start\",\n            \"nodeName\":\"start\",\n            \"pnodes\":[\n\n            ],\n            \"cnodes\":[\n                1,\n                2\n            ],\n            \"pnodeConditions\":{\n\n            },\n            \"mergeType\":\"\",\n            \"ruleNameList\":[\n\n            ],\n            \"result\":\"\"\n        },\n        {\n            \"nodeId\":1,\n            \"nodeType\":\"normal\",\n            \"nodeName\":\"gongan_node\",\n            \"pnodes\":[\n                0\n            ],\n            \"cnodes\":[\n                3,\n                4,\n                5\n            ],\n            \"pnodeConditions\":{\n\n            },\n            \"mergeType\":\"\",\n            \"ruleNameList\":[\n                \"gongan\"\n            ],\n            \"result\":\"\"\n        },\n        {\n            \"nodeId\":2,\n            \"nodeType\":\"normal\",\n            \"nodeName\":\"fayuan_node\",\n            \"pnodes\":[\n                0\n            ],\n            \"cnodes\":[\n                3,\n                4,\n                5\n            ],\n            \"pnodeConditions\":{\n\n            },\n            \"mergeType\":\"\",\n            \"ruleNameList\":[\n                \"fayuan\"\n            ],\n            \"result\":\"\"\n        },\n        {\n            \"nodeId\":3,\n            \"nodeType\":\"end\",\n            \"nodeName\":\"end\",\n            \"pnodes\":[\n                1,\n                2\n            ],\n            \"cnodes\":[\n\n            ],\n            \"pnodeConditions\":{\n                \"1\":\"fail\",\n                \"2\":\"fail\"\n            },\n            \"mergeType\":\"or\",\n            \"result\":\"\"\n        },\n        {\n            \"nodeId\":4,\n            \"nodeType\":\"normal\",\n            \"nodeName\":\"renhang_credit\",\n            \"pnodes\":[\n                1,\n                2\n            ],\n            \"cnodes\":[\n                6,\n                7\n            ],\n            \"pnodeConditions\":{\n                \"1\":\"pass\",\n                \"2\":\"pass\"\n            },\n            \"mergeType\":\"and\",\n            \"result\":\"\"\n        },\n        {\n            \"nodeId\":5,\n            \"nodeType\":\"normal\",\n            \"nodeName\":\"company_credit\",\n            \"pnodes\":[\n                1,\n                2\n            ],\n            \"cnodes\":[\n                6,\n                7\n            ],\n            \"pnodeConditions\":{\n                \"1\":\"pass\",\n                \"2\":\"pass\"\n            },\n            \"mergeType\":\"and\",\n            \"result\":\"\"\n        },\n        {\n            \"nodeId\":6,\n            \"nodeType\":\"end\",\n            \"nodeName\":\"end\",\n            \"pnodes\":[\n                4,\n                5\n            ],\n            \"cnodes\":[\n\n            ],\n            \"pnodeConditions\":{\n                \"4\":\"fail\",\n                \"5\":\"fail\"\n            },\n            \"mergeType\":\"or\",\n            \"result\":\"\"\n        },\n        {\n            \"nodeId\":7,\n            \"nodeType\":\"normal\",\n            \"nodeName\":\"\",\n            \"pnodes\":[\n                4,\n                5\n            ],\n            \"cnodes\":[\n\n            ],\n            \"pnodeConditions\":{\n                \"4\":\"fail\",\n                \"5\":\"fail\"\n            },\n            \"mergeType\":\"and\",\n            \"result\":\"\"\n        }\n    ],\n    \"inputData\":\"\",\n    \"outputData\":\"\"\n}"
-	err := json.Unmarshal([]byte(s), tree)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	treeString, err := json.Marshal(tree)
-	fmt.Println(string(treeString))
+	tree := internalpkg.Tree{}
 	var m []*model.SysTree
-	err = localdb.Raw("select * from sys_tree where id =1").Scan(&m).Error
+	err := localdb.Raw("select * from sys_tree where id =3").Scan(&m).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
-		log.Fatalln(err)
+		logger.Error(err)
+		return
 	}
-	result := localdb.Exec("insert into sys_tree (`sys_id`,`sys_name`,`tree`)values(?,?,?)", 1, "主业务线", treeString)
-	fmt.Println(result)
+
+	err = json.Unmarshal([]byte(m[0].Tree), &tree)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	myList := list.New()
+	myList.PushBack(0)
+	for myList.Len() > 0 {
+		curLevelLength := myList.Len()
+		//层序遍历
+		for i := 0; i < curLevelLength; i++ {
+			element := myList.Front()
+			myList.Remove(element)
+			if _, ok := element.Value.(int); !ok {
+				logger.Error(err)
+				return
+			}
+			nodeId := element.Value.(int)
+			node := tree.Nodes[nodeId]
+			//执行节点
+			executeNode(&tree, node)
+
+			//节点执行成功加入子节点到队列
+			if node.IsSuccessful {
+				for _, nodeId := range node.Cnodes {
+					myList.PushBack(nodeId)
+				}
+			}
+		}
+	}
 
 	//ginEngine := gin.New()
 	//ginEngine.Handler()
