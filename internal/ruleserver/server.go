@@ -1,9 +1,13 @@
 package ruleserver
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func Run() {
-	postfixList := GeneratorGenPostfixList("20-10<5 && 11<1||2>1")
-	PrintTreeNodeList(postfixList)
+
+	inputData := map[string]int{"a": 1, "b": 2, "c": 3}
+	postfixList := GeneratorGenPostfixList("c-2==a", inputData)
+	//PrintTreeNodeList(postfixList)
 	fmt.Println(ExecutePostfixList(postfixList))
 }

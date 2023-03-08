@@ -27,6 +27,8 @@ func (o Operator) DoubleOperatorFunc(a, b any) any {
 		result = a.(bool) && b.(bool)
 	case "||":
 		result = a.(bool) || b.(bool)
+	case "==":
+		result = a.(int) == b.(int)
 	}
 	return result
 }
@@ -56,7 +58,7 @@ func PrintTreeNodeList(treeNodeList *list.List) {
 }
 
 func pushOperator(inputOperator string, operatorList *list.List, postfixTreeList *list.List) {
-	operatorLevel := map[string]int{"||": 12, "&&": 11, "<": 6, ">": 6, "+": 4, "-": 4, "*": 3, "/": 3, "(": 1, ")": 1}
+	operatorLevel := map[string]int{"||": 12, "&&": 11, "==": 7, "<": 6, ">": 6, "+": 4, "-": 4, "*": 3, "/": 3, "(": 1, ")": 1}
 	for {
 		tmpElement := operatorList.Front()
 		if tmpElement == nil {
@@ -74,12 +76,30 @@ func pushOperator(inputOperator string, operatorList *list.List, postfixTreeList
 	operatorList.PushFront(inputOperator)
 }
 
-func GenPostfixList(infixString string) *list.List {
+func GenPostfixList(infixString string, inputData map[string]int) *list.List {
 	operatorList := list.New()
 	postfixList := list.New()
 	for i := 0; i < len(infixString); {
 		if infixString[i] == ' ' {
 			i++
+			continue
+		}
+		//变量
+		if ('a' <= infixString[i] && infixString[i] <= 'z') || ('A' <= infixString[i] && infixString[i] <= 'Z') || infixString[i] == '_' {
+			variableBytes := []byte{}
+			variableBytes = append(variableBytes, infixString[i])
+			i++
+			for i < len(infixString) && ('a' <= infixString[i] && infixString[i] <= 'z' || 'A' <= infixString[i] && infixString[i] <= 'Z' || infixString[i] == '_' || '0' <= infixString[i] && infixString[i] <= '9') {
+				variableBytes = append(variableBytes, infixString[i])
+				i++
+			}
+			variable := string(variableBytes)
+			if _, ok := inputData[variable]; !ok {
+				log.Logger().Error("variable not found in input data map")
+				return nil
+			}
+			tmpTreeNode := &TreeNode{Type: "number", Value: inputData[variable]}
+			postfixList.PushBack(tmpTreeNode)
 			continue
 		}
 		//操作数
@@ -117,6 +137,18 @@ func GenPostfixList(infixString string) *list.List {
 			i += 2
 			continue
 		}
+		//等于判断
+		if infixString[i] == '=' {
+			if i+1 < len(infixString) {
+				if infixString[i+1] != '=' {
+					log.SugarLogger().Error("and operator err")
+					return nil
+				}
+			}
+			pushOperator("==", operatorList, postfixList)
+			i += 2
+			continue
+		}
 
 		//操作符
 		inputOperator := string(infixString[i])
@@ -150,8 +182,8 @@ func GenPostfixList(infixString string) *list.List {
 	return postfixList
 }
 
-func GeneratorGenPostfixList(infixString string) *list.List {
-	postfixList := GenPostfixList(infixString)
+func GeneratorGenPostfixList(infixString string, inputData map[string]int) *list.List {
+	postfixList := GenPostfixList(infixString, inputData)
 	return postfixList
 }
 
@@ -163,11 +195,11 @@ func ExecutePostfixList(postfixList *list.List) bool {
 		if e.Value.(*TreeNode).Type == "number" {
 			operatorValue := e.Value.(*TreeNode).Value.(int)
 			executeStack.PushFront(operatorValue)
-		} else { //operator
+		} else { //only binary operator
 			operator := e.Value.(*TreeNode).Value.(string)
 			operatorElement1 := executeStack.Front()
+			operatorElement2 := operatorElement1.Next()
 			executeStack.Remove(operatorElement1)
-			operatorElement2 := executeStack.Front()
 			executeStack.Remove(operatorElement2)
 			operatorValue1 := operatorElement1.Value
 			operatorValue2 := operatorElement2.Value
