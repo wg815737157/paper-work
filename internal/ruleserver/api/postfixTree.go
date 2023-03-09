@@ -1,4 +1,4 @@
-package ruleserver
+package api
 
 import (
 	"container/list"

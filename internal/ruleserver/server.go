@@ -1,13 +1,40 @@
 package ruleserver
 
 import (
-	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/wg815737157/paper-work/config/ruleconfig"
+	"github.com/wg815737157/paper-work/internal/pkg"
+	"github.com/wg815737157/paper-work/internal/ruleserver/api"
+	"github.com/wg815737157/paper-work/internal/ruleserver/db"
+	"log"
+	"net/http"
 )
 
-func Run() {
+type ruleServer struct {
+	*gin.Engine
+	*http.Server
+}
 
-	inputData := map[string]int{"a": 1, "b": 2, "c": 3}
-	postfixList := GeneratorGenPostfixList("c-2==a", inputData)
-	//PrintTreeNodeList(postfixList)
-	fmt.Println(ExecutePostfixList(postfixList))
+func DefaultServer() pkg.DefaultServer {
+	rs := &ruleServer{}
+	rs.Engine = gin.Default()
+	rs.Server = &http.Server{
+		Addr:    ruleconfig.GlobalConfig.Port,
+		Handler: rs.Engine,
+	}
+	return rs
+}
+
+func (rs *ruleServer) Init() pkg.DefaultServer {
+	db.InitDB()
+	api.LoadHandlers(rs.Engine)
+	//	Init DB
+	//	Init Redis
+	return rs
+}
+
+func (rs *ruleServer) Run() {
+	if err := rs.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("listen: %s\n", err)
+	}
 }

@@ -1,0 +1,11 @@
+port: :10000
+default_db:
+  host: localhost
+  port: 3306
+  username: root
+  password:
+  database: paper_work
+default_redis:
+  host: localhost
+  port: 6379
+  db: 0
