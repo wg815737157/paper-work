@@ -1,4 +1,4 @@
-package utils
+package util
 
 import (
 	"fmt"
@@ -60,11 +60,13 @@ func IsEmpty(i interface{}) bool {
 // AOrB 重构了一下赋值方向的代码，设置相同名称的属性，优先参数1的赋值，其次参数2的赋值
 // 找不到属性会直接弹出错误
 // 属性名为FieldName 注意大小写与结构体保持一直
-// if a != nil && a.field != zero {
-//	res.set(a)
-// } else if b != nil {
-//	res.set(b)
-// }
+//
+//	if a != nil && a.field != zero {
+//		res.set(a)
+//	} else if b != nil {
+//
+//		res.set(b)
+//	}
 func AOrB(fields []string, val, a, b interface{}) error {
 	var (
 		va = ValueOfStruct(a)

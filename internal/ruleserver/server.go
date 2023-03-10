@@ -3,20 +3,20 @@ package ruleserver
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/wg815737157/paper-work/config/ruleconfig"
-	"github.com/wg815737157/paper-work/internal/pkg"
+	internalpkg "github.com/wg815737157/paper-work/internal/pkg"
 	"github.com/wg815737157/paper-work/internal/ruleserver/api"
 	"github.com/wg815737157/paper-work/internal/ruleserver/db"
-	"log"
+	"github.com/wg815737157/paper-work/pkg/log"
 	"net/http"
 )
 
-type ruleServer struct {
+type defaultServer struct {
 	*gin.Engine
 	*http.Server
 }
 
-func DefaultServer() pkg.DefaultServer {
-	rs := &ruleServer{}
+func DefaultServer() internalpkg.DefaultServerInterface {
+	rs := &defaultServer{}
 	rs.Engine = gin.Default()
 	rs.Server = &http.Server{
 		Addr:    ruleconfig.GlobalConfig.Port,
@@ -25,7 +25,7 @@ func DefaultServer() pkg.DefaultServer {
 	return rs
 }
 
-func (rs *ruleServer) Init() pkg.DefaultServer {
+func (rs *defaultServer) Init() internalpkg.DefaultServerInterface {
 	db.InitDB()
 	api.LoadHandlers(rs.Engine)
 	//	Init DB
@@ -33,8 +33,9 @@ func (rs *ruleServer) Init() pkg.DefaultServer {
 	return rs
 }
 
-func (rs *ruleServer) Run() {
+func (rs *defaultServer) Run() {
 	if err := rs.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("listen: %s\n", err)
+		log.SugarLogger().Error(err)
+		return
 	}
 }

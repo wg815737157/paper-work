@@ -1,8 +1,12 @@
-package utils
+package util
 
 import (
+	"bytes"
+	"context"
 	"github.com/opentracing-contrib/go-stdlib/nethttp"
 	"github.com/opentracing/opentracing-go"
+	"io"
+	"log"
 	"net"
 	"net/http"
 	"time"
@@ -40,4 +44,37 @@ func TracedRequest(r *http.Request) (*http.Response, error) {
 	}
 
 	return response, err
+}
+func GetWithContext(ctx context.Context, url string) []byte {
+	userInfoRequest, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	client := http.DefaultClient
+	res, err := client.Do(userInfoRequest)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	resBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return resBytes
+}
+
+func PostWithContext(ctx context.Context, url string, body []byte) []byte {
+	userInfoRequest, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	client := http.DefaultClient
+	res, err := client.Do(userInfoRequest)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	resBytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return resBytes
 }

@@ -1,6 +1,6 @@
 package pkg
 
-type DefaultServer interface {
-	Init() DefaultServer
+type DefaultServerInterface interface {
+	Init() DefaultServerInterface
 	Run()
 }

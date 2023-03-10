@@ -22,9 +22,9 @@ type RedisConfig struct {
 }
 
 type Config struct {
-	Port         string `mapstructure:"port"`
-	DefaultDb    DBConfig
-	DefaultRedis RedisConfig
+	Port         string      `mapstructure:"port"`
+	DefaultDb    DBConfig    `mapstructure:"default_db"`
+	DefaultRedis RedisConfig `mapstructure:"default_redis"`
 }
 
 func (dbConfig DBConfig) DSN() string {
@@ -52,4 +52,5 @@ func init() {
 		panic(err)
 	}
 	err = viper.Unmarshal(&GlobalConfig)
+	fmt.Println(GlobalConfig)
 }

@@ -1,24 +1,27 @@
 package db
 
 import (
+	"github.com/wg815737157/paper-work/config/mainconfig"
+	"github.com/wg815737157/paper-work/pkg/log"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"log"
 	"time"
 )
 
 var localDB *gorm.DB
 
-func init() {
+func InitDB() {
 	var err any
-	dsn := "root:@tcp(localhost:3306)/paper_work?parseTime=true&loc=Local"
+	dsn := mainconfig.GlobalConfig.DefaultDb.DSN()
 	localDB, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalln(err)
+		log.SugarLogger().Error(err)
+		return
 	}
 	sqldb, err := localDB.DB()
 	if err != nil {
-		log.Fatalln(err)
+		log.SugarLogger().Error(err)
+		return
 	}
 	sqldb.SetConnMaxLifetime(3600 * time.Second)
 	sqldb.SetMaxIdleConns(10)
