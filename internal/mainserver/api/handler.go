@@ -91,8 +91,10 @@ func (h *mainServerHandler) riskCheck(c *controller.Controller) {
 	//sysId, _ := strconv.Atoi(sysIdStr)
 	tree := internalpkg.Tree{}
 	ctx := context.Background()
-	url := fmt.Sprintf("localhost:10002/sys_tree?sys_id=%s", sysIdStr)
+	url := fmt.Sprintf("http://localhost:10002/sys_tree?sys_id=%s", sysIdStr)
 	resBytes := util.GetWithContext(ctx, url)
+	fmt.Println(string(resBytes))
+
 	err := json.Unmarshal(resBytes, &tree)
 	if err != nil {
 		logger.Error(err)

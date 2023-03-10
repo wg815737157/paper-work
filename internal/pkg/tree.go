@@ -1,7 +1,7 @@
 package pkg
 
 type Tree struct {
-	InputIndexes    map[string]any //外部依赖指标
-	InternalIndexes map[string]any //内部生成指标
-	Nodes           []*Node
+	InputData  map[string]int `json:"inputData"`  //外部依赖指标
+	OutputData map[string]int `json:"outputData"` //内部生成指标
+	Nodes      []*Node        `json:"nodes"`
 }

@@ -5,8 +5,8 @@ import (
 	"context"
 	"github.com/opentracing-contrib/go-stdlib/nethttp"
 	"github.com/opentracing/opentracing-go"
+	"github.com/wg815737157/paper-work/pkg/log"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"time"
@@ -46,35 +46,43 @@ func TracedRequest(r *http.Request) (*http.Response, error) {
 	return response, err
 }
 func GetWithContext(ctx context.Context, url string) []byte {
+	logger := log.SugarLogger()
 	userInfoRequest, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		log.Fatalln(err)
+		logger.Error(err)
+		return nil
 	}
 	client := http.DefaultClient
 	res, err := client.Do(userInfoRequest)
 	if err != nil {
-		log.Fatalln(err)
+		logger.Error(err)
+		return nil
 	}
 	resBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Fatalln(err)
+		logger.Error(err)
+		return nil
 	}
 	return resBytes
 }
 
 func PostWithContext(ctx context.Context, url string, body []byte) []byte {
+	logger := log.SugarLogger()
 	userInfoRequest, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(body))
 	if err != nil {
-		log.Fatalln(err)
+		logger.Error(err)
+		return nil
 	}
 	client := http.DefaultClient
 	res, err := client.Do(userInfoRequest)
 	if err != nil {
-		log.Fatalln(err)
+		logger.Error(err)
+		return nil
 	}
 	resBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Fatalln(err)
+		logger.Error(err)
+		return nil
 	}
 	return resBytes
 }
