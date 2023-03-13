@@ -88,7 +88,6 @@ type mainServerHandler struct {
 func (h *mainServerHandler) riskCheck(c *controller.Controller) {
 	logger := log.SugarLogger()
 	sysIdStr, _ := c.GetQuery("sys_id")
-	//sysId, _ := strconv.Atoi(sysIdStr)
 	tree := internalpkg.Tree{}
 	ctx := context.Background()
 	url := fmt.Sprintf("http://localhost:10002/sys_tree?sys_id=%s", sysIdStr)
