@@ -182,12 +182,17 @@ func GenPostfixList(infixString string, inputData map[string]int) *list.List {
 	return postfixList
 }
 
+func ExecuteInfixString(infixString string, inputData map[string]int) any {
+	postfixList := GeneratorGenPostfixList(infixString, inputData)
+	return ExecutePostfixList(postfixList)
+
+}
 func GeneratorGenPostfixList(infixString string, inputData map[string]int) *list.List {
 	postfixList := GenPostfixList(infixString, inputData)
 	return postfixList
 }
 
-func ExecutePostfixList(postfixList *list.List) bool {
+func ExecutePostfixList(postfixList *list.List) any {
 	executeStack := list.New()
 	for postfixList.Front() != nil {
 		e := postfixList.Front()
@@ -209,5 +214,5 @@ func ExecutePostfixList(postfixList *list.List) bool {
 	}
 	resultElement := executeStack.Front()
 	executeStack.Remove(resultElement)
-	return resultElement.Value.(bool)
+	return resultElement.Value
 }

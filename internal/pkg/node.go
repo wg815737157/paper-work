@@ -19,12 +19,14 @@ type Node struct {
 //RuleReturn:loanCheck=1
 //RuleReturn:name=result,type=string,value=pass
 
-type RuleDetail struct {
-	RuleExpression string       `json:"ruleExpression"`  //规则表达式
-	ResResult      []RuleReturn `json:"resResultString"` //规则执行后的结果
+type Rule struct {
+	Id          int                `gorm:"id"`          //id
+	RuleName    string             `gorm:"rule_name"`   //规则名
+	RuleDetail  string             `gorm:"rule_detail"` //规则表达式
+	RuleReturns []RuleReturnDetail `gorm:"rule_return"` //规则体执行true的结果
 }
-type RuleReturn struct {
-	Type  string `json:"type"`  //类型 bool,int,string,expression
-	Name  string `json:"name"`  //规则执行成功后的变量名
-	Value any    `json:"value"` //bool:true,false;int:integer,string:pass,fail,expression:表达式
+type RuleReturnDetail struct {
+	Type  string `gorm:"type"`  //类型 int,expression
+	Name  string `gorm:"name"`  //规则执行成功后的变量名
+	Value any    `gorm:"value"` //int:integer,expression:表达式
 }

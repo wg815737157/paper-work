@@ -1,12 +1,14 @@
 package pkg
 
 type RuleRequest struct {
-	ruleId     int                   `gorm:"rule_id"`
-	InputData  map[string]RuleReturn `gorm:"input_data"`
-	OutputData map[string]RuleReturn `gorm:"output_data"`
+	RuleNameList []string       `json:"rule_name_list"`
+	InputData    map[string]int `json:"inputData"`
+	OutputData   map[string]int `json:"outputData"`
 }
 type RuleResponse struct {
-	ruleId     int                   `gorm:"rule_id"`
-	InputData  map[string]RuleReturn `gorm:"input_data"`
-	OutputData map[string]RuleReturn `gorm:"output_data"`
+	RuleIdList     []int          `json:"ruleIdList"`
+	RuleNameList   []string       `json:"rule_name_list"`
+	InputData      map[string]int `json:"inputData"`
+	OutputData     map[string]int `json:"outputData"`
+	RuleResultList []string       `json:"ruleResultList"`
 }
