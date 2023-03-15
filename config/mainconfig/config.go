@@ -21,10 +21,16 @@ type RedisConfig struct {
 	DB   int    `mapstructure:"db"`
 }
 
+type CollaborativeServerConfig struct {
+	Url string `mapstructure:"url"`
+}
+
 type Config struct {
-	Port         string      `mapstructure:"port"`
-	DefaultDb    DBConfig    `mapstructure:"default_db"`
-	DefaultRedis RedisConfig `mapstructure:"default_redis"`
+	Port         string                    `mapstructure:"port"`
+	DefaultDb    DBConfig                  `mapstructure:"default_db"`
+	DefaultRedis RedisConfig               `mapstructure:"default_redis"`
+	RuleServer   CollaborativeServerConfig `mapstructure:"rule_server"`
+	DataServer   CollaborativeServerConfig `mapstructure:"data_server"`
 }
 
 func (dbConfig DBConfig) DSN() string {

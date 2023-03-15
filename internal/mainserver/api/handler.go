@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/wg815737157/paper-work/config/mainconfig"
 	internalpkg "github.com/wg815737157/paper-work/internal/pkg"
 	"github.com/wg815737157/paper-work/pkg/controller"
 	"github.com/wg815737157/paper-work/pkg/log"
@@ -13,6 +14,7 @@ import (
 )
 
 func executeNode(tree *internalpkg.Tree, node *internalpkg.Node) {
+	logger := log.SugarLogger()
 	if node.NodeType == "start" {
 		node.IsUsed = true
 		node.IsSatisfied = true
@@ -31,7 +33,24 @@ func executeNode(tree *internalpkg.Tree, node *internalpkg.Node) {
 		}
 		node.IsSatisfied = true
 		//执行节点内容
-
+		defaultContext := context.Background()
+		rawMap := map[string]interface{}{"ruleIdList": node.RuleIdList}
+		rawBody, err := json.Marshal(rawMap)
+		if err != nil {
+			logger.Error("节点类型异常")
+			return
+		}
+		//请求rule server
+		url := mainconfig.GlobalConfig.RuleServer.Url + "/rule_id"
+		ruleRes := util.PostWithContext(defaultContext, url, rawBody)
+		ruleResponse := &internalpkg.RuleResponse{}
+		err = json.Unmarshal(ruleRes, ruleResponse)
+		if err != nil {
+			logger.Error("json Unmarshal error")
+			return
+		}
+		// 获取最后一个规则的结果作为最后结果
+		node.Result = ruleResponse.RuleResultList[len(ruleResponse.RuleResultList)-1]
 		node.IsSuccessful = true
 		return
 	}
@@ -48,7 +67,6 @@ func executeNode(tree *internalpkg.Tree, node *internalpkg.Node) {
 		node.IsSuccessful = true
 		return
 	}
-
 }
 
 func riskCheck(tree internalpkg.Tree) {
@@ -90,7 +108,8 @@ func (h *mainServerHandler) riskCheck(c *controller.Controller) {
 	sysIdStr, _ := c.GetQuery("sys_id")
 	tree := internalpkg.Tree{}
 	ctx := context.Background()
-	url := fmt.Sprintf("http://localhost:10002/sys_tree?sys_id=%s", sysIdStr)
+	url := mainconfig.GlobalConfig.RuleServer.Url + "/sys_tree?sys_id=" + sysIdStr
+	//url := fmt.Sprintf("http://localhost:10002/sys_tree?sys_id=%s", sysIdStr)
 	resBytes := util.GetWithContext(ctx, url)
 	fmt.Println(string(resBytes))
 
