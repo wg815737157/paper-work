@@ -8,9 +8,8 @@ import (
 )
 
 var (
-	defaultLogger *zap.Logger
-	sugarLogger   *zap.SugaredLogger
-
+	defaultLogger    *zap.Logger
+	sugarLogger      *zap.SugaredLogger
 	customTimeFormat string
 )
 
@@ -54,7 +53,7 @@ func initDefaultLogger() *zap.Logger {
 		zapcore.NewCore(cEncoder, cError, hp),
 		zapcore.NewCore(cEncoder, cInfo, lp),
 	)
-	logger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.PanicLevel))
+	logger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.FatalLevel))
 	zap.RedirectStdLog(logger)
 	zap.ReplaceGlobals(logger)
 	if !useCustomTimeFormat {

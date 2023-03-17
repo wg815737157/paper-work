@@ -2,7 +2,9 @@ package pkg
 
 import (
 	"container/list"
+	"errors"
 	"fmt"
+
 	"github.com/wg815737157/paper-work/pkg/log"
 )
 
@@ -45,17 +47,17 @@ type TreeNode struct {
 	Right *TreeNode
 }
 
-func PrintTreeNodeList(treeNodeList *list.List) {
-	e := treeNodeList.Front()
-	for e != nil {
-		if e.Value.(*TreeNode).Type == "number" {
-			fmt.Println(e.Value.(*TreeNode).Value)
-		} else {
-			fmt.Println(e.Value.(*TreeNode).Value.(string))
-		}
-		e = e.Next()
-	}
-}
+//func PrintTreeNodeList(treeNodeList *list.List) {
+//	e := treeNodeList.Front()
+//	for e != nil {
+//		if e.Value.(*TreeNode).Type == "number" {
+//			fmt.Println(e.Value.(*TreeNode).Value)
+//		} else {
+//			fmt.Println(e.Value.(*TreeNode).Value.(string))
+//		}
+//		e = e.Next()
+//	}
+//}
 
 func pushOperator(inputOperator string, operatorList *list.List, postfixTreeList *list.List) {
 	operatorLevel := map[string]int{"||": 12, "&&": 11, "==": 7, "<": 6, ">": 6, "+": 4, "-": 4, "*": 3, "/": 3, "(": 1, ")": 1}
@@ -76,7 +78,7 @@ func pushOperator(inputOperator string, operatorList *list.List, postfixTreeList
 	operatorList.PushFront(inputOperator)
 }
 
-func GenPostfixList(infixString string, inputData map[string]int) *list.List {
+func GenPostfixList(infixString string, request *RuleNodeRequest) (*list.List, error) {
 	operatorList := list.New()
 	postfixList := list.New()
 	for i := 0; i < len(infixString); {
@@ -94,11 +96,19 @@ func GenPostfixList(infixString string, inputData map[string]int) *list.List {
 				i++
 			}
 			variable := string(variableBytes)
-			if _, ok := inputData[variable]; !ok {
-				log.Logger().Error("variable not found in input data map")
-				return nil
+			var ok1, ok2 bool
+			var value int
+			if _, ok1 = request.InputData[variable]; ok1 {
+				value = request.InputData[variable]
 			}
-			tmpTreeNode := &TreeNode{Type: "number", Value: inputData[variable]}
+			if _, ok2 = request.OutputData[variable]; ok2 {
+				value = request.OutputData[variable]
+			}
+			if !ok1 && !ok2 {
+				log.SugarLogger().Errorf("variable [%s] not found in data map", variable)
+				return nil, errors.New("variable not found in input data map")
+			}
+			tmpTreeNode := &TreeNode{Type: "number", Value: value}
 			postfixList.PushBack(tmpTreeNode)
 			continue
 		}
@@ -118,7 +128,7 @@ func GenPostfixList(infixString string, inputData map[string]int) *list.List {
 			if i+1 < len(infixString) {
 				if infixString[i+1] != '&' {
 					log.SugarLogger().Error("and operator err")
-					return nil
+					return nil, errors.New("and operator err")
 				}
 			}
 			pushOperator("&&", operatorList, postfixList)
@@ -129,8 +139,8 @@ func GenPostfixList(infixString string, inputData map[string]int) *list.List {
 		if infixString[i] == '|' {
 			if i+1 < len(infixString) {
 				if infixString[i+1] != '|' {
-					log.SugarLogger().Error("and operator err")
-					return nil
+					log.SugarLogger().Error("or operator err")
+					return nil, errors.New("or operator err")
 				}
 			}
 			pushOperator("||", operatorList, postfixList)
@@ -141,8 +151,8 @@ func GenPostfixList(infixString string, inputData map[string]int) *list.List {
 		if infixString[i] == '=' {
 			if i+1 < len(infixString) {
 				if infixString[i+1] != '=' {
-					log.SugarLogger().Error("and operator err")
-					return nil
+					log.SugarLogger().Error("= operator err")
+					return nil, errors.New("= operator err")
 				}
 			}
 			pushOperator("==", operatorList, postfixList)
@@ -179,20 +189,19 @@ func GenPostfixList(infixString string, inputData map[string]int) *list.List {
 		tmpTreeNode := &TreeNode{Type: "operator", Value: tmpElement.Value.(string)}
 		postfixList.PushBack(tmpTreeNode)
 	}
-	return postfixList
+	return postfixList, nil
 }
 
-func ExecuteInfixString(infixString string, inputData map[string]int) any {
-	postfixList := GeneratorGenPostfixList(infixString, inputData)
-	return ExecutePostfixList(postfixList)
-
+func GeneratorGenPostfixList(infixString string, request *RuleNodeRequest) (*list.List, error) {
+	postfixList, err := GenPostfixList(infixString, request)
+	if err != nil {
+		log.SugarLogger().Error(err)
+		return nil, err
+	}
+	return postfixList, nil
 }
-func GeneratorGenPostfixList(infixString string, inputData map[string]int) *list.List {
-	postfixList := GenPostfixList(infixString, inputData)
-	return postfixList
-}
 
-func ExecutePostfixList(postfixList *list.List) any {
+func ExecutePostfixList(postfixList *list.List) (any, error) {
 	executeStack := list.New()
 	for postfixList.Front() != nil {
 		e := postfixList.Front()
@@ -214,5 +223,14 @@ func ExecutePostfixList(postfixList *list.List) any {
 	}
 	resultElement := executeStack.Front()
 	executeStack.Remove(resultElement)
-	return resultElement.Value
+	return resultElement.Value, nil
+}
+
+func ExecuteInfixString(infixString string, request *RuleNodeRequest) (any, error) {
+	postfixList, err := GeneratorGenPostfixList(infixString, request)
+	if err != nil {
+		log.SugarLogger().Error(err)
+		return nil, err
+	}
+	return ExecutePostfixList(postfixList)
 }

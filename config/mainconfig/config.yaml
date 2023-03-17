@@ -10,6 +10,6 @@ default_redis:
   port: 6379
   db: 0
 rule_server:
-  url: http://localhost:10001
-data_server:
   url: http://localhost:10002
+data_server:
+  url: http://localhost:10001

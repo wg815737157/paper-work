@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/wg815737157/paper-work/internal/mainserver/db/model"
 	internalpkg "github.com/wg815737157/paper-work/internal/pkg"
@@ -10,6 +11,7 @@ import (
 	"github.com/wg815737157/paper-work/pkg/log"
 	"github.com/wg815737157/paper-work/pkg/util"
 	"gorm.io/gorm"
+	"reflect"
 	"strconv"
 )
 
@@ -35,33 +37,73 @@ type ruleServerHandler struct {
 //百度金融
 //腾讯金融
 
-func ExecuteRule(ruleRequest *internalpkg.RuleRequest, ruleResponse *internalpkg.RuleResponse, rules []internalpkg.Rule) {
+func handleRuleResult(result any) int {
+	if reflect.TypeOf(result).Kind() == reflect.Float64 {
+		return int(result.(float64))
+	}
+	return result.(int)
+}
+
+func ExecuteRule(ruleRequest *internalpkg.RuleNodeRequest, ruleResponseData *internalpkg.RuleNodeResponseData, rules []internalpkg.Rule) error {
 	//按顺序执行
-	for _, ruleName := range ruleRequest.RuleNameList {
+	for _, ruleId := range ruleRequest.RuleIdList {
 		for _, rule := range rules {
-			if rule.RuleName != ruleName {
+			if rule.Id != ruleId {
 				continue
 			}
 			//	规则执行体
-			ruleResponse.RuleIdList = append(ruleResponse.RuleIdList, rule.Id)
-			ruleResponse.RuleNameList = append(ruleResponse.RuleNameList, ruleName)
-
-			if internalpkg.ExecuteInfixString(rule.RuleDetail, ruleRequest.InputData).(bool) {
-				for _, ruleReturn := range rule.RuleReturns {
+			ruleResponseData.RuleIdList = append(ruleResponseData.RuleIdList, rule.Id)
+			ruleResponseData.RuleNameList = append(ruleResponseData.RuleNameList, rule.RuleName)
+			ruleDetailResult, err := internalpkg.ExecuteInfixString(rule.RuleDetail, ruleRequest)
+			if err != nil {
+				log.SugarLogger().Error(err)
+				return err
+			}
+			if ruleDetailResult.(bool) {
+				log.SugarLogger().Debug(rule.RuleReturnPass)
+				for _, ruleReturn := range rule.RuleReturnPass {
 					switch ruleReturn.Type {
 					case "int":
-						ruleRequest.OutputData[ruleReturn.Name] = ruleReturn.Value.(int)
+						returnValue := handleRuleResult(ruleReturn.Value)
+						ruleRequest.OutputData[ruleReturn.Name] = returnValue
+						ruleResponseData.OutputData[ruleReturn.Name] = returnValue
 					case "expression":
-						ruleRequest.OutputData[ruleReturn.Name] = internalpkg.ExecuteInfixString(ruleReturn.Value.(string), ruleRequest.InputData).(int)
+						returnExpressionResult, err := internalpkg.ExecuteInfixString(ruleReturn.Value.(string), ruleRequest)
+						if err != nil {
+							log.SugarLogger().Error(err)
+							return err
+						}
+						returnExpressionValue := handleRuleResult(returnExpressionResult)
+						ruleRequest.OutputData[ruleReturn.Name] = returnExpressionValue
+						ruleResponseData.OutputData[ruleReturn.Name] = returnExpressionValue
 					}
 				}
-				ruleResponse.RuleResultList = append(ruleResponse.RuleResultList, "pass")
+				ruleResponseData.RuleResultList = append(ruleResponseData.RuleResultList, "pass")
 			} else {
-				ruleResponse.RuleResultList = append(ruleResponse.RuleResultList, "fail")
-				return
+				log.SugarLogger().Debug(rule.RuleReturnFail)
+				for _, ruleReturn := range rule.RuleReturnFail {
+					switch ruleReturn.Type {
+					case "int":
+						returnValue := handleRuleResult(ruleReturn.Value)
+						ruleRequest.OutputData[ruleReturn.Name] = returnValue
+						ruleResponseData.OutputData[ruleReturn.Name] = returnValue
+					case "expression":
+						returnExpressionResult, err := internalpkg.ExecuteInfixString(ruleReturn.Value.(string), ruleRequest)
+						if err != nil {
+							log.SugarLogger().Error(err)
+							return err
+						}
+						returnExpressionValue := handleRuleResult(returnExpressionResult)
+						ruleRequest.OutputData[ruleReturn.Name] = returnExpressionValue
+						ruleResponseData.OutputData[ruleReturn.Name] = returnExpressionValue
+					}
+				}
+				ruleResponseData.RuleResultList = append(ruleResponseData.RuleResultList, "fail")
+				return nil
 			}
 		}
 	}
+	return nil
 }
 
 func (h *ruleServerHandler) RuleId(c *controller.Controller) {
@@ -72,26 +114,53 @@ func (h *ruleServerHandler) RuleId(c *controller.Controller) {
 		c.Failed(-1, err.Error())
 		return
 	}
-	ruleRequest := &internalpkg.RuleRequest{}
-	err = json.Unmarshal(bodyBytes, ruleRequest)
+	logger.Infof("请求的body:%s", string(bodyBytes))
+	ruleNodeRequest := &internalpkg.RuleNodeRequest{}
+	err = json.Unmarshal(bodyBytes, ruleNodeRequest)
 	if err != nil {
 		logger.Error("err:", err)
 		c.Failed(-1, err.Error())
 		return
 	}
-	rules := []internalpkg.Rule{}
-	localdb := db.GetLocalDB()
-	err = localdb.Raw("select * from rule_info where rule_name in ?", ruleRequest.RuleNameList).Scan(&rules).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
+	mysqlRules, err := db.GetRuleInfoById(ruleNodeRequest.RuleIdList)
+	if err != nil {
 		logger.Error(err)
 		c.Failed(-1, err.Error())
 		return
 	}
-
-	ruleResponse := &internalpkg.RuleResponse{}
-	ruleResponse.InputData = ruleRequest.InputData
-	ExecuteRule(ruleRequest, ruleResponse, rules)
-	c.SuccessWithData(ruleResponse)
+	if len(mysqlRules) == 0 {
+		errMsg := fmt.Sprintf("rule id [%v] empty", ruleNodeRequest.RuleIdList)
+		logger.Errorf(errMsg)
+		c.Failed(-1, errMsg)
+		return
+	}
+	rules := make([]internalpkg.Rule, len(mysqlRules))
+	for i, mysqlRule := range mysqlRules {
+		rules[i].Id = mysqlRule.Id
+		rules[i].RuleName = mysqlRule.RuleName
+		rules[i].RuleDetail = mysqlRule.RuleDetail
+		err = json.Unmarshal([]byte(mysqlRule.RuleReturnPass), &rules[i].RuleReturnPass)
+		if err != nil {
+			c.Failed(-1, err.Error())
+			return
+		}
+		err = json.Unmarshal([]byte(mysqlRule.RuleReturnFail), &rules[i].RuleReturnFail)
+		if err != nil {
+			c.Failed(-1, err.Error())
+			return
+		}
+	}
+	ruleResponseData := &internalpkg.RuleNodeResponseData{
+		NodeId:    ruleNodeRequest.NodeId,
+		NodeName:  ruleNodeRequest.NodeName,
+		InputData: ruleNodeRequest.InputData, OutputData: map[string]int{},
+	}
+	err = ExecuteRule(ruleNodeRequest, ruleResponseData, rules)
+	if err != nil {
+		c.Failed(-1, err.Error())
+		return
+	}
+	c.SuccessWithData(ruleResponseData)
 	return
 }
 
@@ -100,13 +169,19 @@ func (h *ruleServerHandler) SysTree(c *controller.Controller) {
 	sysId, _ := strconv.Atoi(sysIdStr)
 	localdb := db.GetLocalDB()
 	var m []*model.SysTree
-	err := localdb.Raw("select * from sys_tree where id =?", sysId).Scan(&m).Error
+	err := localdb.Raw("select * from sys_tree where sys_id =?", sysId).Scan(&m).Error
 	if err != nil && err != gorm.ErrRecordNotFound {
 		log.SugarLogger().Error(err)
 		return
 	}
-	resByte, _ := json.Marshal(m[0].Tree)
-	c.SuccessWithData(string(resByte))
+	tree := &internalpkg.Tree{}
+	err = json.Unmarshal([]byte(m[0].Tree), tree)
+	if err != nil {
+		log.SugarLogger().Error(err)
+		return
+	}
+
+	c.SuccessWithData(tree)
 	return
 }
 
