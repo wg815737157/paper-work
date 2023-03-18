@@ -18,25 +18,6 @@ import (
 type ruleServerHandler struct {
 }
 
-//基础数据
-//TailpayAmount
-//Income
-//法院执行
-//SlIdCourtExecuted
-//公安犯罪
-//CrimeResult
-//企业征信
-//TaxInformationNum
-//人行征信
-//DebitAmountOfOverdue
-//LoanDebitOverdue
-//CarLoanInDebt
-//手机征信
-//PhoneInfo
-//京东金融
-//百度金融
-//腾讯金融
-
 func handleRuleResult(result any) int {
 	if reflect.TypeOf(result).Kind() == reflect.Float64 {
 		return int(result.(float64))
@@ -99,7 +80,6 @@ func ExecuteRule(ruleRequest *internalpkg.RuleNodeRequest, ruleResponseData *int
 					}
 				}
 				ruleResponseData.RuleResultList = append(ruleResponseData.RuleResultList, "fail")
-				return nil
 			}
 		}
 	}

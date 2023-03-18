@@ -27,3 +27,9 @@ type RuleTreeResponse struct {
 	Message string `json:"message"`
 	Tree    *Tree  `json:"data"`
 }
+
+type DataServerResponse struct {
+	Code    int            `json:"code"`
+	Message string         `json:"message"`
+	Data    map[string]int `json:"data"`
+}
