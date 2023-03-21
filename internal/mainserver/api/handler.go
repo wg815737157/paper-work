@@ -202,7 +202,7 @@ func (h *mainServerHandler) riskCheck(c *controller.Controller) {
 		c.Failed(-1, err.Error())
 		return
 	}
-	c.SuccessWithData(result)
+	c.SuccessWithData(map[string]any{"result": result, "outputData": ruleTreeResponse.Tree.OutputData})
 	return
 }
 
